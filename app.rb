@@ -26,16 +26,48 @@ class Poster
   end
 end
 
+class LinkPoster
+  include Sidekiq::Worker
+  def perform(title, subreddit, linkurl)
+    $client.submit(title, subreddit, options = {:url => linkurl})
+  end
+end
+
+class TextPoster
+  include Sidekiq::Worker
+  def perform(title, subreddit, selftext)
+    $client.submit(title, subreddit, options = {:text => selftext})
+  end
+end
+
 class Autodank < Sinatra::Application
-  get '/submit' do
-    haml :form
+  get '/' do
+    haml :index
   end
 
-  post '/submit' do
+  get '/link' do
+    haml :link
+  end
+
+  post '/link' do
     title = params[:title]
     subreddit = params[:subreddit]
+    linkurl = params[:url]
     inputtime = params[:time]
     time = Time.parse(inputtime)
-    Poster.perform_at(time, title, subreddit)
+    LinkPoster.perform_at(time, title, subreddit, linkurl)
+  end
+
+  get '/text' do
+    haml :text
+  end
+
+  post '/text' do
+    title = params[:title]
+    subreddit = params[:subreddit]
+    selftext = params[:text]
+    inputtime = params[:time]
+    time = Time.parse(inputtime)
+    TextPoster.perform_at(time, title, subreddit, selftext)
   end
 end
